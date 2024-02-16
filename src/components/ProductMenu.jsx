@@ -1,24 +1,67 @@
 import { Menu, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import ProductCard from "./Product";
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-function ProductMenu({
-  handleFilter,
-  handleSort,
-  isSort,
-  isLoading,
-  error,
-  productsList,
-  cart,
-  handleAddCart,
-  query,
-  isFiltered,
-  filteredList,
-}) {
+function ProductMenu({ isLoading, error, query, state, dispatch }) {
+  const { isSort, productsList, cart, isFiltered, filteredList } = state;
+
+  useEffect(function () {
+    const controller = new AbortController();
+
+    async function fetchProduct() {
+      try {
+        const res = await fetch(`https://dummyjson.com/products/`, {
+          signal: controller.signal,
+        });
+
+        if (!res.ok)
+          throw new Error("Something went wrong with fetching product");
+
+        const data = await res.json();
+        if (data.Response === "False") throw new Error("Product not found");
+
+        dispatch({ type: "load", payload: data.products });
+        console.log("loading");
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.log(err.message);
+        }
+      }
+    }
+
+    fetchProduct();
+
+    return function () {
+      controller.abort();
+    };
+  }, []);
+  function handleAddCart(e) {
+    dispatch({ type: "addCart", payload: e });
+  }
+
+  function handleSort() {
+    if (!isSort) {
+      const sorted = productsList.sort((a, b) => a.price - b.price);
+      dispatch({ type: "sort", payload: sorted });
+    } else {
+      const unsorted = productsList.sort((a, b) => a.id - b.id);
+      dispatch({ type: "sort", payload: unsorted });
+    }
+  }
+
+  function handleFilter(min, max) {
+    const filteredProducts = productsList.filter(
+      (a) => a.price > min && a.price < max
+    );
+    dispatch({
+      type: "filterPrice",
+      payload: { list: filteredProducts, range: [min, max] },
+    });
+  }
   return (
     <div>
       <div className="flex justify-between mx-2">

@@ -62,86 +62,22 @@ function AppLayout() {
   const [query, setQuery] = useState("");
   const { searchedProducts, isLoading, error } = useSearchedProduct(query);
 
-  const [
-    { productsList, isSort, cart, totalAmount, isFiltered, filteredList },
-    dispatch,
-  ] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
     if (query === "") return;
     dispatch({ type: "searchProduct", payload: searchedProducts });
   }, [searchedProducts, query]);
 
-  useEffect(function () {
-    const controller = new AbortController();
-
-    async function fetchProduct() {
-      try {
-        const res = await fetch(`https://dummyjson.com/products/`, {
-          signal: controller.signal,
-        });
-
-        if (!res.ok)
-          throw new Error("Something went wrong with fetching product");
-
-        const data = await res.json();
-        if (data.Response === "False") throw new Error("Product not found");
-
-        dispatch({ type: "load", payload: data.products });
-        console.log("loading");
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          console.log(err.message);
-        }
-      }
-    }
-
-    fetchProduct();
-
-    return function () {
-      controller.abort();
-    };
-  }, []);
-
-  function handleAddCart(e) {
-    dispatch({ type: "addCart", payload: e });
-  }
-
-  function handleSort() {
-    if (!isSort) {
-      const sorted = productsList.sort((a, b) => a.price - b.price);
-      dispatch({ type: "sort", payload: sorted });
-    } else {
-      const unsorted = productsList.sort((a, b) => a.id - b.id);
-      dispatch({ type: "sort", payload: unsorted });
-    }
-  }
-
-  function handleFilter(min, max) {
-    const filteredProducts = productsList.filter(
-      (a) => a.price > min && a.price < max
-    );
-    dispatch({
-      type: "filterPrice",
-      payload: { list: filteredProducts, range: [min, max] },
-    });
-  }
-
   return (
     <div>
-      <Navbar setQuery={setQuery} totalAmount={totalAmount} />
+      <Navbar setQuery={setQuery} totalAmount={state.totalAmount} />
       <ProductMenu
-        handleFilter={handleFilter}
-        handleSort={handleSort}
-        isSort={isSort}
+        state={state}
         isLoading={isLoading}
         error={error}
-        productsList={productsList}
-        cart={cart}
-        handleAddCart={handleAddCart}
         query={query}
-        isFiltered={isFiltered}
-        filteredList={filteredList}
+        dispatch={dispatch}
       />
     </div>
   );
